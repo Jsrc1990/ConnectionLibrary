@@ -8,13 +8,29 @@ Gestiona las conexiones con bases de datos relacionales como SQL Server, MySQL, 
 ```cs
 string stringConnection = "Server=localhost;Database=MyDatabase;Trusted_Connection=True;";
 RelationalDatabaseConnector relationalDatabaseConnector = new RelationalDatabaseConnector(
-ConnectionLibrary.DatabaseEnum.SqlServer,
+ConnectionLibrary.Enums.DatabaseEnum.SqlServer,
 stringConnection);
+```
+
+## **ExecuteNonQuery**
+
+Ejecuta la consulta y obtiene el numero de filas afectadas.
+
+```cs
+string query = "Insert Into Cliente Values (Default, 'Juan')";
+Response<int> response = relationalDatabaseConnector?.ExecuteNonQuery(query);
+int result = response.Data;
+```
+
+Result:
+
+```
+1
 ```
 
 ## **GetDataListFromQuery**
 
-Ejecuta la consulta y obtiene la lista de filas convertidas en entidades de formato JSON.
+Ejecuta la consulta y obtiene la lista de filas convertidas en entidades de formato Json.
 
 ```cs
 string query = "Select * From Client";
@@ -41,7 +57,7 @@ Result:
 
 ## **GetDataSetFromQuery**
 
-Ejecuta la consulta y obtiene el conjunto de tablas y sus filas convertidas en entidades de formato JSON.
+Ejecuta la consulta y obtiene el conjunto de tablas y sus filas convertidas en entidades de formato Json.
 
 ```cs
 string query = "Select * From Client Select * From Item";
@@ -80,9 +96,25 @@ Result:
 }}
 ```
 
+## **ExecuteStoredProcedure**
+
+Ejecuta el procedimiento en la base de datos y obtiene el numero de filas afectadas.
+
+```
+string storedProcedure = "SP_InsertClient";
+Response<int> response = relationalDatabaseConnector?.ExecuteStoredProcedure(storedProcedure);
+int result = response.Data;
+```
+
+Result:
+
+```
+1
+```
+
 ## **GetDataListFromStoredProcedure**
 
-Ejecuta el procedimiento almacenado y obtiene la lista de filas convertidas en entidades de formato JSON.
+Ejecuta el procedimiento almacenado y obtiene la lista de filas convertidas en entidades de formato Json.
 
 ```cs
 string storedProcedure = "SP_GetClients";
@@ -109,7 +141,7 @@ Result:
 
 ## **GetDataSetFromStoredProcedure**
 
-Ejecuta el procedimiento almacenado y obtiene el conjunto de tablas y sus filas convertidas en entidades de formato JSON.
+Ejecuta el procedimiento almacenado y obtiene el conjunto de tablas y sus filas convertidas en entidades de formato Json.
 
 ```cs
 string storedProcedure = "SP_GetClientsAndItems";
