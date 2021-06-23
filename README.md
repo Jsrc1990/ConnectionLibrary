@@ -1,9 +1,15 @@
 # ConnectionLibrary
-Librería para gestionar las conexiones con bases de datos y microservicios externos
+Librería para gestionar las conexiones con bases de datos y servicios web.
 
-# RELATIONAL DATABASES
+## Introducción
 
-Gestiona las conexiones con bases de datos relacionales como SQL Server, MySQL, Oracle DB, entre otras.
+Cuando trabajamos con proyectos de diferentes soluciones, por lo general creamos las capas de presentación, negocio, y datos. Independientemente la arquitectura que usemos siempre debemos establecer la conexión con las bases de datos y servicios web ya sea en la capa de datos, o en una capa superior para separar las clases y funciones que realizan la conexión del resto de nuestro código. Esto se vuelve bastante repetitivo para cada proyecto de diferente solución, por lo que el objetivo de esta librería es evitar estar creando siempre las mismas clases de conexión, y copiando de un proyecto a otro. Solo con descargar el paquete en nuget, e implementándolo en tu capa de datos.
+
+En tu capa de datos almacenarás las cadenas de conexión de las bases de datos, endpoint de los servicios web, y api keys por mediante un secret manager o cualquier otro método que proporcione seguridad para tus proyectos. Además estarán las clases que representarán a cada modelo o entidad, con sus respectivas funciones getAll(), getById(), save(), update(), delete() para preparar los request y mapear los responses. o bien una clase genérica de tipo T. que realice cada una de las operaciones anteriores.
+
+# Relational Databases
+
+Gestiona las conexiones con bases de datos relacionales como Sql Server, MySql, Oracle db, entre otras.
 
 ```cs
 string stringConnection = "Server=localhost;Database=MyDatabase;Trusted_Connection=True;";
@@ -17,7 +23,7 @@ stringConnection);
 Ejecuta la consulta y obtiene el numero de filas afectadas.
 
 ```cs
-string query = "Insert Into Cliente Values (Default, 'Juan')";
+string query = "Insert Into Client Values ('123', 'Juan', '01/01/1990')";
 Response<int> response = relationalDatabaseConnector?.ExecuteNonQuery(query);
 int result = response.Data;
 ```
@@ -100,9 +106,14 @@ Result:
 
 Ejecuta el procedimiento en la base de datos y obtiene el numero de filas afectadas.
 
-```
+```cs
 string storedProcedure = "SP_InsertClient";
-Response<int> response = relationalDatabaseConnector?.ExecuteStoredProcedure(storedProcedure);
+List<(string, object)> parameters = new List<(string, object)>()
+{
+    new ("@Nombre", "Sebastian"),
+    new ("@FechaNacimiento", "01/01/2002")
+};
+Response<int> response = relationalDatabaseConnector?.ExecuteStoredProcedure(storedProcedure, parameters);
 int result = response.Data;
 ```
 
