@@ -121,6 +121,18 @@ namespace ConnectionLibrary.RelationalDatabase
         }
 
         /// <summary>
+        /// Ejecuta la consulta y obtiene la lista de filas convertidas a entidades
+        /// </summary>
+        /// <typeparam name="T">El tipo genérico</typeparam>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades</returns>
+        public Response<T> GetDataListFromStoredProcedure<T>(string storedProcedureName, List<(string, object)> parameters = null, int retry = 2)
+        {
+            return IConnection?.GetDataListFromStoredProcedure<T>(storedProcedureName, parameters, retry);
+        }
+
+        /// <summary>
         /// Ejecuta el procedimiento almacenado y obtiene el conjunto de tablas de la base de datos convertidas en JSON
         /// </summary>
         /// <param name="storedProcedureName">El procedimiento almacenado</param>

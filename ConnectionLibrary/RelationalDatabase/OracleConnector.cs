@@ -269,6 +269,57 @@ namespace ConnectionLibrary.RelationalDatabase
         }
 
         /// <summary>
+        /// Ejecuta el procedimiento almacenado y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="storedProcedureName">El procedimiento almacenado</param>
+        /// <param name="parameters">Los parámetros</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetDataListFromStoredProcedure<T>(string storedProcedureName, List<(string, object)> parameters = null, int retry = 2)
+        {
+            Response<T> response = new Response<T>();
+            try
+            {
+                //Define la conexión
+                using (OracleConnection sqlConnection = new OracleConnection(ConnectionString))
+                {
+                    //Define el comando
+                    using (OracleCommand sqlCommand = new OracleCommand(storedProcedureName, sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        //Agrega los parámetros
+                        if (parameters?.Any() == true)
+                            foreach ((string, object) currentTuple in parameters)
+                            {
+                                OracleParameter currentParameter = new OracleParameter(currentTuple.Item1, currentTuple.Item2);
+                                sqlCommand.Parameters.Add(currentParameter);
+                            }
+                        //Abre la conexión y ejecuta la consulta
+                        using (OracleDataAdapter adapter = new OracleDataAdapter(sqlCommand))
+                        {
+                            DataTable table = new DataTable();
+                            adapter?.Fill(table);
+                            if (table != null)
+                            {
+                                string json = JsonConvert.SerializeObject(table);
+                                response.Data = JsonConvert.DeserializeObject<T>(json);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return GetDataListFromStoredProcedure<T>(storedProcedureName, parameters, retry);
+                response.Exception = ex;
+            }
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
         /// Ejecuta el procedimiento almacenado y obtiene el conjunto de tablas de la base de datos convertidas en JSON
         /// </summary>
         /// <param name="storedProcedureName">El procedimiento almacenado</param>
