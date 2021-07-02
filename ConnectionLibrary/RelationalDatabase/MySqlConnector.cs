@@ -92,7 +92,7 @@ namespace ConnectionLibrary.RelationalDatabase
         /// <typeparam name="T">El tipo genérico</typeparam>
         /// <param name="query">La consulta</param>
         /// <param name="retry">El numero de intentos</param>
-        /// <returns>El objeto genérico obtenido</returns>
+        /// <returns>El objeto genérico</returns>
         public Response<T> ExecuteScalar<T>(string query, int retry = 2)
         {
             Response<T> response = new Response<T>() { Data = default(T) };
@@ -216,9 +216,55 @@ namespace ConnectionLibrary.RelationalDatabase
             {
                 //Realiza otro intento
                 if (retry-- > 0)
-                    return ExecuteNonQuery(storedProcedureName, retry);
+                    return ExecuteStoredProcedure(storedProcedureName, parameters, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = -1;
+                response.Exception = ex;
+            }
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
+        /// Ejecuta el procedimiento en la base de datos y obtiene el escalar del tipo genérico
+        /// </summary>
+        /// <typeparam name="T">El tipo genérico</typeparam>
+        /// <param name="storedProcedureName">El procedimiento almacenado</param>
+        /// <param name="parameters">Los parámetros</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>El objeto genérico</returns>
+        public Response<T> ExecuteScalarFromStoredProcedure<T>(string storedProcedureName, List<(string, object)> parameters = null, int retry = 2)
+        {
+            Response<T> response = new Response<T>() { Data = default(T) };
+            try
+            {
+                //Define la conexión
+                using (MySQL.MySqlConnection sqlConnection = new MySQL.MySqlConnection(ConnectionString))
+                {
+                    //Define el comando
+                    using (MySQL.MySqlCommand sqlCommand = new MySQL.MySqlCommand(storedProcedureName, sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        //Agrega los parámetros
+                        if (parameters?.Any() == true)
+                            foreach ((string, object) currentTuple in parameters)
+                            {
+                                MySQL.MySqlParameter currentParameter = new MySQL.MySqlParameter(currentTuple.Item1, currentTuple.Item2);
+                                sqlCommand.Parameters.Add(currentParameter);
+                            }
+                        //Abre la conexión y ejecuta la consulta
+                        sqlConnection?.Open();
+                        response.Data = (T)sqlCommand.ExecuteScalar();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return ExecuteScalarFromStoredProcedure<T>(storedProcedureName, parameters, retry);
+                //Establece que hubo un error en la conexión
+                response.Data = default(T);
                 response.Exception = ex;
             }
             //Retorna el resultado
@@ -269,12 +315,13 @@ namespace ConnectionLibrary.RelationalDatabase
         }
 
         /// <summary>
-        /// Ejecuta el procedimiento almacenado y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// Ejecuta el procedimiento almacenado y obtiene la lista de filas convertidas a entidades
         /// </summary>
+        /// <typeparam name="T">El tipo genérico</typeparam>
         /// <param name="storedProcedureName">El procedimiento almacenado</param>
         /// <param name="parameters">Los parámetros</param>
         /// <param name="retry">El numero de intentos</param>
-        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        /// <returns>La lista de filas convertidas a entidades</returns>
         public Response<T> GetDataListFromStoredProcedure<T>(string storedProcedureName, List<(string, object)> parameters = null, int retry = 2)
         {
             Response<T> response = new Response<T>();
