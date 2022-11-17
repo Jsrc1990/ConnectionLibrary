@@ -71,7 +71,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -103,7 +103,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -137,7 +137,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -168,7 +168,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -202,7 +202,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -233,7 +233,7 @@ namespace ConnectionLibrary.WebServices
             }
             catch (Exception ex)
             {
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }

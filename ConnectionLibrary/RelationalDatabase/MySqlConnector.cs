@@ -11,7 +11,7 @@ namespace ConnectionLibrary.RelationalDatabase
     /// <summary>
     /// Gestiona la conexión con MySQL
     /// </summary>
-    internal class MySqlConnector : IRelationalDatabaseConnector
+    public class MySqlConnector : IRelationalDatabaseConnector
     {
         /// <summary>
         /// Define la cadena de conexión
@@ -51,7 +51,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return ExecuteNonQuery(query, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = -1;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -81,7 +81,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return ExecuteScalar(query, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = string.Empty;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -112,7 +112,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return ExecuteScalar<T>(query, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = default(T);
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             return response;
         }
@@ -144,7 +144,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return GetDataListFromQuery(query, retry);
                 //Establece que hubo un error en la conexión
                 table = null;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Establece el resultado
             response.Data = table != null ? JsonConvert.SerializeObject(table) : string.Empty;
@@ -179,7 +179,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return GetDataSetFromQuery(query, retry);
                 //Establece que hubo un error en la conexión
                 dataSet = null;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Establece el resultado
             response.Data = dataSet != null ? JsonConvert.SerializeObject(dataSet) : string.Empty;
@@ -219,7 +219,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return ExecuteStoredProcedure(storedProcedureName, parameters, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = -1;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Retorna el resultado
             return response;
@@ -265,7 +265,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return ExecuteScalarFromStoredProcedure<T>(storedProcedureName, parameters, retry);
                 //Establece que hubo un error en la conexión
                 response.Data = default(T);
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Retorna el resultado
             return response;
@@ -306,7 +306,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return GetDataListFromStoredProcedure(storedProcedureName, parameters, retry);
                 //Establece que hubo un error en la conexión
                 table = null;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Establece el resultado
             response.Data = table != null ? JsonConvert.SerializeObject(table) : string.Empty;
@@ -360,7 +360,7 @@ namespace ConnectionLibrary.RelationalDatabase
                 //Realiza otro intento
                 if (retry-- > 0)
                     return GetDataListFromStoredProcedure<T>(storedProcedureName, parameters, retry);
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Retorna el resultado
             return response;
@@ -401,7 +401,7 @@ namespace ConnectionLibrary.RelationalDatabase
                     return GetDataListFromStoredProcedure(storedProcedureName, parameters, retry);
                 //Establece que hubo un error en la conexión
                 dataSet = null;
-                response.Exception = ex;
+                response?.Errors?.Add(ex?.Message);
             }
             //Establece el resultado
             response.Data = dataSet != null ? JsonConvert.SerializeObject(dataSet) : string.Empty;

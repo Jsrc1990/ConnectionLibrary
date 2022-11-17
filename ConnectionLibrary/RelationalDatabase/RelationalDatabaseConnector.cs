@@ -20,8 +20,8 @@ namespace ConnectionLibrary.RelationalDatabase
         /// <summary>
         /// Inicializa las propiedades de esta clase de conexión
         /// </summary>
-        /// <param name="databaseEnum"></param>
-        /// <param name="connectionString"></param>
+        /// <param name="databaseEnum">El motor de base de datos</param>
+        /// <param name="connectionString">La cadena de conexión de la base de datos</param>
         public RelationalDatabaseConnector(DatabaseEnum databaseEnum, string connectionString)
         {
             switch (databaseEnum)
