@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Net;
 using System.Text;
@@ -64,7 +63,6 @@ namespace ConnectionLibrary.WebServices
                 {
                     //Obtiene la cadena resultante
                     string result = context?.DownloadString(endPoint?.ToLower());
-                    JToken jToken = JToken.Parse(result);
                     //Establece la cadena resultante en la respuesta
                     response.Data = result;
                 }
@@ -93,7 +91,6 @@ namespace ConnectionLibrary.WebServices
                     //Obtiene la cadena resultante
                     string url = endPoint + queries;
                     string result = context?.DownloadString(url);
-                    JToken jToken = JToken.Parse(result);
                     if (!string.IsNullOrWhiteSpace(result))
                     {
                         //Establece la cadena resultante en la respuesta
@@ -127,7 +124,6 @@ namespace ConnectionLibrary.WebServices
                 {
                     //Obtiene la cadena resultante
                     string result = context?.UploadString(endPoint, "POST", parameters);
-                    JToken jToken = JToken.Parse(result);
                     if (!string.IsNullOrWhiteSpace(result))
                     {
                         //Establece la cadena resultante en la respuesta
@@ -161,7 +157,6 @@ namespace ConnectionLibrary.WebServices
                 {
                     //Obtiene la cadena resultante
                     string result = context?.UploadString(endPoint?.ToLower(), "POST", parameters);
-                    JToken jToken = JToken.Parse(result);
                     //Establece la cadena resultante en la respuesta
                     response.Data = result;
                 }
@@ -192,7 +187,6 @@ namespace ConnectionLibrary.WebServices
                 {
                     //Obtiene la cadena resultante
                     string result = context?.UploadString(endPoint, "PUT", parameters);
-                    JToken jToken = JToken.Parse(result);
                     if (!string.IsNullOrWhiteSpace(result))
                     {
                         //Establece la cadena resultante en la respuesta
@@ -226,7 +220,6 @@ namespace ConnectionLibrary.WebServices
                 {
                     //Obtiene la cadena resultante
                     string result = context?.UploadString(endPoint?.ToLower(), "PUT", parameters);
-                    JToken jToken = JToken.Parse(result);
                     //Establece la cadena resultante en la respuesta
                     response.Data = result;
                 }
