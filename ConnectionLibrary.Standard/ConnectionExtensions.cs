@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace ConnectionLibrary
+namespace ConnectionLibrary.Standard
 {
     /// <summary>
     /// Define las extensiones de la Conexión

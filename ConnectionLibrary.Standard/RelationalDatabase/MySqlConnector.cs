@@ -6,7 +6,7 @@ using System.Linq;
 using TransversalLibrary.Standard;
 using MySQL = MySqlConnector;
 
-namespace ConnectionLibrary.RelationalDatabase
+namespace ConnectionLibrary.Standard.RelationalDatabase
 {
     /// <summary>
     /// Gestiona la conexión con MySQL

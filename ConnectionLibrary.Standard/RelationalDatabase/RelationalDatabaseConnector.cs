@@ -1,8 +1,8 @@
-﻿using ConnectionLibrary.Enums;
+﻿using ConnectionLibrary.Standard.Enums;
 using System.Collections.Generic;
 using TransversalLibrary.Standard;
 
-namespace ConnectionLibrary.RelationalDatabase
+namespace ConnectionLibrary.Standard.RelationalDatabase
 {
     /// <summary>
     /// Define el conector para cualquier base de datos relacional

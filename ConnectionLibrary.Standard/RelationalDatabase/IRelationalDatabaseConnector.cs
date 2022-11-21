@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using TransversalLibrary.Standard;
 
-namespace ConnectionLibrary.RelationalDatabase
+namespace ConnectionLibrary.Standard.RelationalDatabase
 {
     /// <summary>
     /// Define el comportamiento de las bases de datos relaciones

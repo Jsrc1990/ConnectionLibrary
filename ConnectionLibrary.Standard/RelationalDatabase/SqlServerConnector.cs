@@ -6,7 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using TransversalLibrary.Standard;
 
-namespace ConnectionLibrary.RelationalDatabase
+namespace ConnectionLibrary.Standard.RelationalDatabase
 {
     /// <summary>
     /// Gestiona la conexión con SQL Server

@@ -4,7 +4,7 @@ using System.Net;
 using System.Text;
 using TransversalLibrary.Standard;
 
-namespace ConnectionLibrary.WebServices
+namespace ConnectionLibrary.Standard.WebServices
 {
     /// <summary>
     /// Define el conector por mediante WebClient

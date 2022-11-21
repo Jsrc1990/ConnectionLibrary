@@ -1,4 +1,4 @@
-﻿namespace ConnectionLibrary.Enums
+﻿namespace ConnectionLibrary.Standard.Enums
 {
     /// <summary>
     /// Define los diferentes motores de base de datos
