@@ -41,19 +41,13 @@ namespace ConnectionLibrary.WebServices
         /// <summary>
         /// Obtiene el WebClient
         /// </summary>
-        /// <param name="types"></param>
-        /// <returns></returns>
         private WebClient GetWebClient()
         {
             WebClient webClient = new WebClient();
-            webClient.Headers.Add("Content-Type", "Application/json; charset=utf-8");
-            webClient.Headers.Add("Accept-Type", "Application/json; charset=utf-8");
             if (Headers?.Any() == true)
                 foreach ((string, string) header in Headers)
                     webClient.Headers.Add(header.Item1, header.Item2);
             webClient.Encoding = Encoding.UTF8;
-            if (!string.IsNullOrWhiteSpace(Token))
-                webClient.Headers.Add("Authorization", "Bearer " + Token);
             return webClient;
         }
 

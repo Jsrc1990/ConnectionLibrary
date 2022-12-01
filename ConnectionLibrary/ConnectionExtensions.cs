@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -19,14 +20,24 @@ namespace ConnectionLibrary
         /// Obtiene el query del Create de la tabla
         /// </summary>
         /// <param name="tableName">El nombre de la tabla (Opcional)</param>
+        /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <returns>El query de la tabla a crear</returns>
-        public static string GetCreateTableQuery(this Type type, string tableName = "")
+        public static Response<string> GetCreateTableQuery(this object currentObject, string tableName = "", string primaryKeyName = "Id")
         {
-            //En el momento no hay instrucciones
-            tableName = string.IsNullOrWhiteSpace(tableName) ? type?.Name : tableName;
-            _ = tableName;
-            string query = string.Empty;
-            return query;
+            //Establece el nombre de la tabla
+            Response<string> tableNameResponse = GetTableName(currentObject, tableName);
+            if (tableNameResponse?.Errors?.Any() == true) return tableNameResponse;
+            tableName = tableNameResponse?.Data;
+            //Establece las propiedades y sus valores
+            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject);
+            if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
+            List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
+            //Establece las definiciones
+            List<string> definitions = CreateDefinitionTable(propertiesAndValues, primaryKeyName);
+            string properties = string.Join($",{Environment.NewLine}", definitions);
+            //Establece el Query
+            string query = $"CREATE TABLE {tableName}{Environment.NewLine}({Environment.NewLine}{properties}{Environment.NewLine}) SELECT 1";
+            return new Response<string>() { Data = query };
         }
 
         /// <summary>
@@ -109,7 +120,7 @@ namespace ConnectionLibrary
             if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
             List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
             string properties = string.Join(",", propertiesAndValues?.Select(x => x.Item1));
-            string values = string.Join(",", propertiesAndValues?.Select(x => x.Item2));
+            string values = string.Join(",", propertiesAndValues?.Select(x => AddSimpleQuotesOrNot(x.Item2)));
             //Establece el Query
             string query = $"INSERT INTO {tableName} ({properties}) VALUES ({values})";
             return new Response<string>() { Data = query };
@@ -134,7 +145,7 @@ namespace ConnectionLibrary
             Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, primaryKeyName, isPrimaryKeyDefaultValue);
             if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
             List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
-            string properties = string.Join(",", propertiesAndValues?.Select(x => $"{x.Item1} = {x.Item2}"));
+            string properties = string.Join(",", propertiesAndValues?.Select(x => $"{x.Item1} = {AddSimpleQuotesOrNot(x.Item2)}"));
             //Establece el valor de la Llave primaria
             Response<string> primarykeyValueResponse = GetPrimaryKeyValue(currentObject, primaryKeyName);
             if (primarykeyValueResponse?.Errors?.Any() == true) return primarykeyValueResponse;
@@ -165,6 +176,10 @@ namespace ConnectionLibrary
             return new Response<string>() { Data = query };
         }
 
+        #endregion
+
+        #region FUNCTIONS
+
         /// <summary>
         /// Obtiene el nombre de la tabla
         /// </summary>
@@ -173,22 +188,34 @@ namespace ConnectionLibrary
         /// <returns>El nombre de la tabla</returns>
         private static Response<string> GetTableName(object currentObject, string tableName)
         {
-            //Si el objeto es de tipo JsonElement entonces
-            if (currentObject?.GetType() == typeof(JsonElement))
+            Type type = currentObject?.GetType();
+            try
             {
-                //Si no se especificó un nombre de tabla entonces
-                if (string.IsNullOrWhiteSpace(tableName))
-                    return new Response<string>() { Errors = new List<string>() { "El objeto de tipo JsonElement no puede especificar un nombre de tabla por sí mismo, Usted necesita especificar un nombre de tabla." } };
-                //Si se especificó un nombre de tabla entonces
-                return new Response<string>() { Data = tableName };
+                //Si se especificó el nombre de la tabla entonces
+                if (!string.IsNullOrWhiteSpace(tableName))
+                    return new Response<string>() { Data = tableName };
+                //Si el objeto es System.Type
+                if (currentObject?.GetType()?.Name == "RuntimeType")
+                {
+                    Type currentType = currentObject as Type;
+                    return new Response<string>() { Data = currentType?.Name };
+                }
+                //Si el objeto es de tipo JsonElement entonces
+                if (type == typeof(JsonElement))
+                {
+                    //Si no se especificó un nombre de tabla entonces
+                    if (string.IsNullOrWhiteSpace(tableName))
+                        return new Response<string>() { Errors = new List<string>() { "El objeto de tipo JsonElement no puede especificar un nombre de tabla por sí mismo, Usted necesita especificar un nombre de tabla." } };
+                    //Si se especificó un nombre de tabla entonces
+                    return new Response<string>() { Data = tableName };
+                }
             }
-            //Si el objeto es de tipo clase (Ejemplo: Persona) puede extraer el nombre por mediante su tipo o ser especificado
-            else
+            catch (Exception ex)
             {
-                //Establece el nombre de la tabla
-                tableName = string.IsNullOrWhiteSpace(tableName) ? currentObject?.GetType()?.Name : tableName;
-                return new Response<string>() { Data = tableName };
+                Console.WriteLine(ex?.Message);
             }
+            //Si el objeto es una clase (Ejemplo: Persona) puede extraer el nombre por mediante su tipo o ser especificado
+            return new Response<string>() { Data = type?.Name };
         }
 
         /// <summary>
@@ -239,7 +266,7 @@ namespace ConnectionLibrary
             }
             //Retorna la respuesta
             Response<List<(string, string)>> response = new Response<List<(string, string)>>() { Data = propertiesAndValues };
-            if (propertiesAndValues?.Any() == true) response?.Errors?.Add("El objeto no tiene propiedades");
+            if (propertiesAndValues?.Any() == false) response?.Errors?.Add("El objeto no tiene propiedades");
             return response;
         }
 
@@ -267,7 +294,7 @@ namespace ConnectionLibrary
                     //Si es una cadena entonces (El String es de tipo lista, y además clase, por eso se pone acá de primero)
                     if (propertyType == typeof(string))
                     {
-                        propertiesAndValues?.Add(new(propertyInfo?.Name, $"'{propertyInfo?.GetValue(currentObject)}'"));
+                        propertiesAndValues?.Add(new(propertyInfo?.Name, $"{propertyInfo?.GetValue(currentObject)}"));
                     }
                     //Si es cualquier tipo de lista (Array, List, Collection) entonces
                     if (typeof(IEnumerable).IsAssignableFrom(propertyType))
@@ -299,38 +326,134 @@ namespace ConnectionLibrary
         private static List<(string, string)> GetPropertiesAndValues(JsonElement jsonElement, string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
         {
             List<(string, string)> propertiesAndValues = new List<(string, string)>();
-            foreach (JsonProperty jsonProperty in jsonElement.EnumerateObject())
+            try
             {
-                //Si es la llave primaria y el valor es el por defecto entonces
-                if (jsonProperty.Name == primaryKeyName && isPrimaryKeyDefaultValue)
+                foreach (JsonProperty jsonProperty in jsonElement.EnumerateObject())
                 {
-                    propertiesAndValues?.Add((jsonProperty.Name, "DEFAULT"));
+                    //Si es la llave primaria y el valor es el por defecto entonces
+                    if (jsonProperty.Name == primaryKeyName && isPrimaryKeyDefaultValue)
+                    {
+                        propertiesAndValues?.Add((jsonProperty.Name, "DEFAULT"));
+                    }
+                    else
+                    //Si es una cadena entonces
+                    if (jsonProperty.Value.ValueKind == JsonValueKind.String)
+                    {
+                        propertiesAndValues?.Add((jsonProperty.Name, $"{jsonProperty.Value.GetString()}"));
+                    }
+                    else
+                    //Si es cualquier tipo de lista (Array, List, Collection) entonces
+                    if (jsonProperty.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        //En el momento no hay instrucciones
+                    }
+                    else
+                    //Si es una clase entonces
+                    if (jsonProperty.Value.ValueKind == JsonValueKind.Object)
+                    {
+                        //En el momento no hay instrucciones
+                    }
+                    else
+                    //Si son números entonces
+                    {
+                        propertiesAndValues?.Add((jsonProperty.Name, $"{jsonProperty.Value.ToString()}")); //jsonProperty.Value.GetString() NO porque cuando es número se revienta
+                    }
                 }
-                else
-                //Si es una cadena entonces
-                if (jsonProperty.Value.ValueKind == JsonValueKind.String)
-                {
-                    propertiesAndValues?.Add((jsonProperty.Name, $"'{jsonProperty.Value.GetString()}'"));
-                }
-                else
-                //Si es cualquier tipo de lista (Array, List, Collection) entonces
-                if (jsonProperty.Value.ValueKind == JsonValueKind.Array)
-                {
-                    //En el momento no hay instrucciones
-                }
-                else
-                //Si es una clase entonces
-                if (jsonProperty.Value.ValueKind == JsonValueKind.Object)
-                {
-                    //En el momento no hay instrucciones
-                }
-                else
-                //Si son números entonces
-                {
-                    propertiesAndValues?.Add((jsonProperty.Name, $"{jsonProperty.Value.GetString()}"));
-                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex?.Message);
+
             }
             return propertiesAndValues;
+        }
+
+        /// <summary>
+        /// Crea la definición de los campos de la tabla
+        /// </summary>
+        /// <param name="propertiesAndValues">Las propiedades y valores</param>
+        /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
+        /// <returns>La definición de los campos de la tabla</returns>
+        private static List<string> CreateDefinitionTable(List<(string, string)> propertiesAndValues, string primaryKeyName = "Id")
+        {
+            List<string> list = new List<string>();
+            foreach ((string, string) item in propertiesAndValues)
+            {
+                string value = string.Empty;
+                //Si la propiedad es una Llave primaria entonces
+                if (item.Item1?.ToLower() == primaryKeyName?.ToLower())
+                {
+                    value = "VARCHAR (36) PRIMARY KEY NOT NULL DEFAULT CONVERT(VARCHAR(36), NEWID(), 0)";
+                }
+                //Si es una fecha entonces
+                else
+                if (DateTime.TryParse(item.Item2, out _))
+                {
+                    value = "DATETIME NOT NULL";
+                }
+                //Si es un número entero entonces
+                else
+                if (int.TryParse(item.Item2, out _))
+                {
+                    value = "INTEGER NOT NULL";
+                }
+                //Si es un número decimal entonces
+                else
+                if (decimal.TryParse(item.Item2, out _))
+                {
+                    value = "DECIMAL NOT NULL";
+                }
+                //Si es un Boolean entonces
+                else
+                if (bool.TryParse(item.Item2, out _))
+                {
+                    value = "BIT NOT NULL";
+                }
+                //Si es una cadena (String) entonces
+                else
+                {
+                    value = $"VARCHAR({item.Item2?.Length}) NOT NULL";
+                }
+                list?.Add($"{item.Item1} {value}");
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Agrega comillas simples o no
+        /// </summary>
+        /// <returns>El valor envuelto en un objeto</returns>
+        private static object AddSimpleQuotesOrNot(string value)
+        {
+            //Si es un numero decimal
+            if (decimal.TryParse(value, out decimal decimalValue))
+            {
+                return decimalValue;
+            }
+            else
+            //Si es un número entero entonces
+            if (int.TryParse(value, out int intValue))
+            {
+                return intValue;
+            }
+            else
+            //Si es un boolean entonces
+            if (bool.TryParse(value, out bool booleanValue))
+            {
+                return Convert.ToInt16(booleanValue);
+            }
+            else
+            //Si es una fecha entonces
+            if (DateTime.TryParse(value, out DateTime dateTime))
+            {
+                return $"'{dateTime}'";
+            }
+            //Si es una cadena (String) entonces
+            else
+            {
+                return $"'{value}'";
+            }
         }
 
         #endregion
