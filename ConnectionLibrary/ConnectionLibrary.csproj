@@ -4,7 +4,7 @@
 		<TargetFramework>net5.0</TargetFramework>
 		<Authors>Jsrc1990</Authors>
 		<Company>None</Company>
-		<Version>1.0.7</Version>
+		<Version>1.0.8</Version>
 		<RepositoryUrl>https://github.com/Jsrc1990/ConnectionLibrary</RepositoryUrl>
 		<Description>Librería para gestionar las conexiones con bases de datos y servicios web</Description>
 	</PropertyGroup>
@@ -12,10 +12,10 @@
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.0.123" />
 		<PackageReference Include="MySqlConnector" Version="2.2.1" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="ODP.NetCore" Version="2.0.12" />
 		<PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
-		<PackageReference Include="TransversalLibrary" Version="1.0.5" />
+		<PackageReference Include="TransversalLibrary" Version="1.0.6" />
 	</ItemGroup>
 
 </Project>
