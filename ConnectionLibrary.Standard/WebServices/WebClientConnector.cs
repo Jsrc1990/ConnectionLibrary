@@ -31,11 +31,6 @@ namespace ConnectionLibrary.Standard.WebServices
             }
         }
 
-        //public WebClientConnector(string token)
-        //{
-        //    Token = token;
-        //}
-
         /// <summary>
         /// Obtiene el WebClient
         /// </summary>
