@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -80,7 +81,8 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
                     {
                         //Abre la conexión y ejecuta la consulta
                         sqlConnection?.Open();
-                        response.Data = Convert.ToString(sqlCommand?.ExecuteScalar());
+                        object result = sqlCommand?.ExecuteScalar();
+                        response.Data = Convert.ToString(result);
                     }
                 }
             }
@@ -90,6 +92,7 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
                 if (retry-- > 0)
                     return ExecuteScalar(query, retry);
                 //Establece que hubo un error en la conexión
+                response.HttpStatusCode = System.Net.HttpStatusCode.InternalServerError;
                 response.Data = string.Empty;
                 response?.Errors?.Add(ex?.Message);
             }
@@ -165,6 +168,129 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
             }
             //Establece el resultado
             response.Data = table != null ? JsonConvert.SerializeObject(table) : string.Empty;
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
+        /// Ejecuta la consulta y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <example>Response<List<Person>></example>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetDataListFromQuery<T>(string query, int retry = 2)
+        {
+            Response<T> response = new Response<T>();
+            DataTable table = new DataTable();
+            try
+            {
+                //Define la conexión
+                using (SqlConnection connection = new SqlConnection(ConnectionString))
+                {
+                    //Abre la conexión y ejecuta la consulta
+                    using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                    {
+                        adapter?.Fill(table);
+                        //Establece el resultado
+                        if (table != null)
+                        {
+                            string json = JsonConvert.SerializeObject(table);
+                            response.Data = JsonConvert.DeserializeObject<T>(json);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return GetDataListFromQuery<T>(query, retry);
+                //Establece que hubo un error en la conexión
+                response.HttpStatusCode = System.Net.HttpStatusCode.InternalServerError;
+                response?.Errors?.Add(ex?.Message);
+            }
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
+        /// Ejecuta la consulta y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<IEnumerable<object>> GetIEnumerableOfObjectFromQuery(string query, int retry = 2)
+        {
+            Response<IEnumerable<object>> response = new Response<IEnumerable<object>>();
+            DataTable table = new DataTable();
+            try
+            {
+                //Define la conexión
+                using (SqlConnection connection = new SqlConnection(ConnectionString))
+                {
+                    //Abre la conexión y ejecuta la consulta
+                    using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                    {
+                        adapter?.Fill(table);
+                        //Establece el resultado
+                        if (table != null)
+                        {
+                            string json = JsonConvert.SerializeObject(table);
+                            response.Data = JsonConvert.DeserializeObject<IEnumerable<object>>(json);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return GetIEnumerableOfObjectFromQuery(query, retry);
+                //Establece que hubo un error en la conexión
+                response.HttpStatusCode = System.Net.HttpStatusCode.InternalServerError;
+                response?.Errors?.Add(ex?.Message);
+            }
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
+        /// Ejecuta la consulta y obtiene la primera entidad de la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>la primera entidad de la lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetFirstFromQuery<T>(string query, int retry = 2)
+        {
+            Response<T> response = new Response<T>();
+            DataTable table = new DataTable();
+            try
+            {
+                //Define la conexión
+                using (SqlConnection connection = new SqlConnection(ConnectionString))
+                {
+                    //Abre la conexión y ejecuta la consulta
+                    using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                    {
+                        adapter?.Fill(table);
+                        //Establece el resultado
+                        if (table != null)
+                        {
+                            string json = JsonConvert.SerializeObject(table?.Rows[0]);
+                            response.Data = JsonConvert.DeserializeObject<T>(json);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return GetFirstFromQuery<T>(query, retry);
+                //Establece que hubo un error en la conexión
+                response?.Errors?.Add(ex?.Message);
+            }
             //Retorna el resultado
             return response;
         }

@@ -14,12 +14,12 @@ namespace ConnectionLibrary.Standard.WebServices
         /// <summary>
         /// Define el token
         /// </summary>
-        private static string _Token;
+        private string _Token;
 
         /// <summary>
         /// Obtiene o establece el token
         /// </summary>
-        public static string Token
+        public string Token
         {
             get
             {
@@ -30,6 +30,11 @@ namespace ConnectionLibrary.Standard.WebServices
                 _Token = value;
             }
         }
+
+        //public WebClientConnector(string token)
+        //{
+        //    Token = token;
+        //}
 
         /// <summary>
         /// Obtiene el WebClient
@@ -43,7 +48,7 @@ namespace ConnectionLibrary.Standard.WebServices
             webClient.Headers.Add("Accept-Type", "Application/json; charset=utf-8");
             webClient.Encoding = Encoding.UTF8;
             if (!string.IsNullOrWhiteSpace(Token))
-                webClient.Headers.Add("Authorization", "Bearer " + Token);
+                webClient.Headers.Add("Authorization", $"Bearer {Token}");
             return webClient;
         }
 
@@ -103,6 +108,65 @@ namespace ConnectionLibrary.Standard.WebServices
                 response?.Errors?.Add(ex?.Message);
             }
             return response;
+        }
+
+        /// <summary>
+        /// Realiza un Get al EndPoint especificado, y retorna la cadena resultante
+        /// </summary>
+        /// <param name="endPoint"></param>
+        /// <remarks>No es necesario pasarle Response<T> solo T, esto con el fin de no hacer duplicidad</remarks>
+        /// <returns></returns>
+        public Response<T> GetResponse<T>(string endPoint, string queries = "")
+        {
+            try
+            {
+                //Obtiene el cliente web
+                using (WebClient context = GetWebClient())
+                {
+                    //Obtiene la cadena resultante
+                    string url = $"{endPoint}{queries}";
+                    string result = context?.DownloadString(url);
+                    //Si el resultado es vacío entonces
+                    if (string.IsNullOrWhiteSpace(result)) return Response<T>.ReturnInternalServerError("The result is empty");
+                    //Establece la cadena resultante en la respuesta
+                    Response<T> response = JsonConvert.DeserializeObject<Response<T>>(result);
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                return Response<T>.ReturnInternalServerError(ex?.Message);
+            }
+        }
+
+        /// <summary>
+        /// Realiza un Post al EndPoint especificado, le envía el body, y retorna la cadena resultante
+        /// </summary>
+        /// <param name="endPoint"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        public Response<T> PostResponse<T>(string endPoint, object body = null)
+        {
+            try
+            {
+                //Serializa la entidad
+                string parameters = JsonConvert.SerializeObject(body);
+                //Obtiene el cliente web
+                using (WebClient context = GetWebClient())
+                {
+                    //Obtiene la cadena resultante
+                    string result = context?.UploadString(endPoint, "POST", parameters);
+                    //Si el resultado es vacío entonces
+                    if (string.IsNullOrWhiteSpace(result)) return Response<T>.ReturnInternalServerError("The result is empty");
+                    //Establece la cadena resultante en la respuesta
+                    Response<T> response = JsonConvert.DeserializeObject<Response<T>>(result);
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                return Response<T>.ReturnInternalServerError(ex?.Message);
+            }
         }
 
         /// <summary>

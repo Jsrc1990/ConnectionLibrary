@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using TransversalLibrary.Standard;
 using MySQL = MySqlConnector;
@@ -148,6 +149,46 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
             }
             //Establece el resultado
             response.Data = table != null ? JsonConvert.SerializeObject(table) : string.Empty;
+            //Retorna el resultado
+            return response;
+        }
+
+        /// <summary>
+        /// Ejecuta la consulta y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetDataListFromQuery<T>(string query, int retry = 2)
+        {
+            Response<T> response = new Response<T>();
+            DataTable table = new DataTable();
+            try
+            {
+                //Define la conexión
+                using (SqlConnection connection = new SqlConnection(ConnectionString))
+                {
+                    //Abre la conexión y ejecuta la consulta
+                    using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                    {
+                        adapter?.Fill(table);
+                        //Establece el resultado
+                        if (table != null)
+                        {
+                            string json = JsonConvert.SerializeObject(table);
+                            response.Data = JsonConvert.DeserializeObject<T>(json);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Realiza otro intento
+                if (retry-- > 0)
+                    return GetDataListFromQuery<T>(query, retry);
+                //Establece que hubo un error en la conexión
+                response?.Errors?.Add(ex?.Message);
+            }
             //Retorna el resultado
             return response;
         }
@@ -407,6 +448,11 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
             response.Data = dataSet != null ? JsonConvert.SerializeObject(dataSet) : string.Empty;
             //Retorna el resultado
             return response;
+        }
+
+        public Response<T> GetFirstFromQuery<T>(string query, int retry = 2)
+        {
+            throw new NotImplementedException();
         }
     }
 }

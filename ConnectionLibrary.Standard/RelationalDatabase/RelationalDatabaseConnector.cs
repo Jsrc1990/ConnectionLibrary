@@ -86,6 +86,28 @@ namespace ConnectionLibrary.Standard.RelationalDatabase
         }
 
         /// <summary>
+        /// Ejecuta la consulta y obtiene la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetDataListFromQuery<T>(string query, int retry = 2)
+        {
+            return IConnection?.GetDataListFromQuery<T>(query, retry);
+        }
+
+        /// <summary>
+        /// Ejecuta la consulta y obtiene la primera entidad de la lista de filas convertidas a entidades en formato JSON
+        /// </summary>
+        /// <param name="query">La consulta</param>
+        /// <param name="retry">El numero de intentos</param>
+        /// <returns>La lista de filas convertidas a entidades en formato JSON</returns>
+        public Response<T> GetFirstFromQuery<T>(string query, int retry = 2)
+        {
+            return IConnection?.GetFirstFromQuery<T>(query, retry);
+        }
+
+        /// <summary>
         /// Ejecuta la consulta y obtiene el conjunto de tablas y sus filas convertidas a entidades en formato JSON
         /// </summary>
         /// <param name="query">La consulta</param>

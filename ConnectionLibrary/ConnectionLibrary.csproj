@@ -11,11 +11,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.0.123" />
-		<PackageReference Include="MySqlConnector" Version="2.2.1" />
+		<PackageReference Include="MySqlConnector" Version="2.2.5" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="ODP.NetCore" Version="2.0.12" />
 		<PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
-		<PackageReference Include="TransversalLibrary" Version="1.0.6" />
+		<PackageReference Include="TransversalLibrary" Version="1.0.9" />
 	</ItemGroup>
 
 </Project>

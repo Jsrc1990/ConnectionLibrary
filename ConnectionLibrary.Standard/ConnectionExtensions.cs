@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using TransversalLibrary.Standard;
 
@@ -21,14 +23,14 @@ namespace ConnectionLibrary.Standard
         /// <param name="tableName">El nombre de la tabla (Opcional)</param>
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <returns>El query de la tabla a crear</returns>
-        public static Response<string> GetCreateTableQuery(this object currentObject, string tableName = "", string primaryKeyName = "Id")
+        public static Response<string> GetCreateTableQuery(this object currentObject, string tableName = "", string identityKeyName = "Record", string primaryKeyName = "Id")
         {
             //Establece el nombre de la tabla
             Response<string> tableNameResponse = GetTableName(currentObject, tableName);
             if (tableNameResponse?.Errors?.Any() == true) return tableNameResponse;
             tableName = tableNameResponse?.Data;
             //Establece las propiedades y sus valores
-            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject);
+            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, identityKeyName, primaryKeyName);
             if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
             List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
             //Establece las definiciones
@@ -100,6 +102,35 @@ namespace ConnectionLibrary.Standard
         }
 
         /// <summary>
+        /// Obtiene el query del Select de la tabla especificada por su condición especificada (Id por defecto)
+        /// </summary>
+        /// <param name="tableName">El nombre de la tabla</param>
+        /// <param name="conditionValue">El valor de la condición</param>
+        /// <param name="conditionProperty">El nombre de la condición (Id por defecto)(Opcional pero obligatorio)</param>
+        /// <returns>El query del Select de la tabla especificada por su condición especificada (Id por defecto)</returns>
+        public static Response<string> GetSimpleSelectByIdQuery(string tableName, string selectValues = "", string conditionProperty = "", string conditionValue = "")
+        {
+            List<string> errors = new List<string>();
+            //Valida el nombre de la tabla
+            if (string.IsNullOrWhiteSpace(tableName))
+                errors?.Add("El nombre de la tabla es obligatorio");
+            //Valida el nombre de la condición
+            if (!string.IsNullOrWhiteSpace(conditionValue) && string.IsNullOrWhiteSpace(conditionProperty))
+                errors?.Add("El nombre de la condición es obligatorio");
+            //Valida el valor de la condición
+            if (!string.IsNullOrWhiteSpace(conditionProperty) && string.IsNullOrWhiteSpace(conditionValue))
+                errors?.Add("El valor de la condición es obligatorio");
+            //Si hay errores entonces
+            if (errors?.Any() == true)
+                return Response<string>.ReturnBadRequest(errors?.ToArray());
+            //Genera la consulta
+            if (string.IsNullOrWhiteSpace(selectValues)) selectValues = "*";
+            string where = !string.IsNullOrWhiteSpace(conditionProperty) && !string.IsNullOrWhiteSpace(conditionValue) ? $"WHERE {conditionProperty} = '{conditionValue}'" : string.Empty;
+            string query = $"SELECT {selectValues} FROM {tableName} {where}";
+            return new Response<string>() { Data = query };
+        }
+
+        /// <summary>
         /// Obtiene el query del Insert del Objeto
         /// </summary>
         /// <param name="currentObject">El objeto a Insertar</param>
@@ -107,7 +138,7 @@ namespace ConnectionLibrary.Standard
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <param name="isPrimaryKeyDefaultValue">Si el valor por defecto de la Llave primaria es DEFAULT</param>
         /// <returns>El query del Insert del Objeto</returns>
-        public static Response<string> GetInsertQuery(this object currentObject, string tableName = "", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
+        public static Response<string> GetInsertQuery(this object currentObject, string tableName = "", string identityKeyName = "Record", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false, string dateFormat = "yyyy-MM-dd HH:mm:ss")
         {
             if (currentObject == null) return new Response<string>() { Errors = new List<string>() { "El objeto es nulo" } };
             //Establece el nombre de la tabla
@@ -115,13 +146,13 @@ namespace ConnectionLibrary.Standard
             if (tableNameResponse?.Errors?.Any() == true) return tableNameResponse;
             tableName = tableNameResponse?.Data;
             //Establece las propiedades y sus valores
-            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, primaryKeyName, isPrimaryKeyDefaultValue);
+            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, identityKeyName, primaryKeyName, isPrimaryKeyDefaultValue);
             if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
             List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
             string properties = string.Join(",", propertiesAndValues?.Select(x => x.Item1));
-            string values = string.Join(",", propertiesAndValues?.Select(x => AddSimpleQuotesOrNot(x.Item2)));
+            string values = string.Join(",", propertiesAndValues?.Select(x => AddSimpleQuotesOrNot(x.Item2, dateFormat)));
             //Establece el Query
-            string query = $"INSERT INTO {tableName} ({properties}) VALUES ({values})";
+            string query = $"INSERT INTO {tableName} ({properties}) VALUES ({values}) SELECT {primaryKeyName} From {tableName} Where {identityKeyName} = (SELECT SCOPE_IDENTITY())";
             return new Response<string>() { Data = query };
         }
 
@@ -133,7 +164,7 @@ namespace ConnectionLibrary.Standard
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <param name="isPrimaryKeyDefaultValue">Si el valor por defecto de la Llave primaria es DEFAULT</param>
         /// <returns>El query del Update del Objeto</returns>
-        public static Response<string> GetUpdateQuery(this object currentObject, string tableName = "", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
+        public static Response<string> GetUpdateQuery(this object currentObject, string tableName = "", string identityKeyName = "Record", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
         {
             if (currentObject == null) return new Response<string>() { Errors = new List<string>() { "El objeto es nulo" } };
             //Establece el nombre de la tabla
@@ -141,7 +172,7 @@ namespace ConnectionLibrary.Standard
             if (tableNameResponse?.Errors?.Any() == true) return tableNameResponse;
             tableName = tableNameResponse?.Data;
             //Establece las propiedades y sus valores
-            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, primaryKeyName, isPrimaryKeyDefaultValue);
+            Response<List<(string, string)>> propertiesAndValuesResponse = GetAllPropertiesAndValues(currentObject, identityKeyName, primaryKeyName, isPrimaryKeyDefaultValue);
             if (propertiesAndValuesResponse?.Errors?.Any() == true) return new Response<string>() { Errors = propertiesAndValuesResponse?.Errors };
             List<(string, string)> propertiesAndValues = propertiesAndValuesResponse?.Data;
             string properties = string.Join(",", propertiesAndValues?.Select(x => $"{x.Item1} = {AddSimpleQuotesOrNot(x.Item2)}"));
@@ -250,18 +281,18 @@ namespace ConnectionLibrary.Standard
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <param name="isPrimaryKeyDefaultValue">Si el valor por defecto de la Llave primaria es DEFAULT</param>
         /// <returns>Las propiedades y los valores</returns>
-        private static Response<List<(string, string)>> GetAllPropertiesAndValues(object currentObject, string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
+        private static Response<List<(string, string)>> GetAllPropertiesAndValues(object currentObject, string identityKeyName = "Record", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
         {
             List<(string, string)> propertiesAndValues;
             //Si el objeto es de tipo JsonElement entonces
             if (currentObject?.GetType() == typeof(JsonElement))
             {
-                propertiesAndValues = GetPropertiesAndValues((JsonElement)currentObject, primaryKeyName, isPrimaryKeyDefaultValue);
+                propertiesAndValues = GetPropertiesAndValues((JsonElement)currentObject, identityKeyName, primaryKeyName, isPrimaryKeyDefaultValue);
             }
             //Si el objeto es de tipo clase (Ejemplo: Persona)
             else
             {
-                propertiesAndValues = GetPropertiesAndValues(currentObject, primaryKeyName, isPrimaryKeyDefaultValue);
+                propertiesAndValues = GetPropertiesAndValues(currentObject, identityKeyName, primaryKeyName, isPrimaryKeyDefaultValue);
             }
             //Retorna la respuesta
             Response<List<(string, string)>> response = new Response<List<(string, string)>>() { Data = propertiesAndValues };
@@ -276,7 +307,7 @@ namespace ConnectionLibrary.Standard
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <param name="isPrimaryKeyDefaultValue">Si el valor por defecto de la Llave primaria es DEFAULT</param>
         /// <returns>Las propiedades y los valores</returns>
-        private static List<(string, string)> GetPropertiesAndValues(object currentObject, string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
+        private static List<(string, string)> GetPropertiesAndValues(object currentObject, string identityKeyName = "Record", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
         {
             if (currentObject == null) return null;
             List<(string, string)> propertiesAndValues = new List<(string, string)>();
@@ -284,6 +315,12 @@ namespace ConnectionLibrary.Standard
                 foreach (PropertyInfo propertyInfo in currentObject?.GetType()?.GetProperties())
                 {
                     Type propertyType = propertyInfo?.PropertyType;
+                    //Si es la llave de identidad entonces
+                    if (propertyInfo?.Name == identityKeyName && isPrimaryKeyDefaultValue)
+                    {
+                        //En el momento no hay instrucciones
+                    }
+                    else
                     //Si es la llave primaria y el valor es el por defecto entonces
                     if (propertyInfo?.Name == primaryKeyName && isPrimaryKeyDefaultValue)
                     {
@@ -295,6 +332,7 @@ namespace ConnectionLibrary.Standard
                     {
                         propertiesAndValues?.Add((propertyInfo?.Name, $"{propertyInfo?.GetValue(currentObject)}"));
                     }
+                    else
                     //Si es cualquier tipo de lista (Array, List, Collection) entonces
                     if (typeof(IEnumerable).IsAssignableFrom(propertyType))
                     {
@@ -322,13 +360,18 @@ namespace ConnectionLibrary.Standard
         /// <param name="primaryKeyName">La llave primaria (Por defecto: Id)</param>
         /// <param name="isPrimaryKeyDefaultValue">Si el valor por defecto de la Llave primaria es DEFAULT</param>
         /// <returns>Las propiedades y los valores</returns>
-        private static List<(string, string)> GetPropertiesAndValues(JsonElement jsonElement, string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
+        private static List<(string, string)> GetPropertiesAndValues(JsonElement jsonElement, string identityKeyName = "Record", string primaryKeyName = "Id", bool isPrimaryKeyDefaultValue = false)
         {
             List<(string, string)> propertiesAndValues = new List<(string, string)>();
             try
             {
-                foreach (System.Text.Json.JsonProperty jsonProperty in jsonElement.EnumerateObject())
+                foreach (JsonProperty jsonProperty in jsonElement.EnumerateObject())
                 {
+                    //Si es la llave de identidad entonces
+                    if (jsonProperty.Name == identityKeyName && isPrimaryKeyDefaultValue)
+                    {
+                        //En el momento no hay instrucciones
+                    }
                     //Si es la llave primaria y el valor es el por defecto entonces
                     if (jsonProperty.Name == primaryKeyName && isPrimaryKeyDefaultValue)
                     {
@@ -358,12 +401,10 @@ namespace ConnectionLibrary.Standard
                         propertiesAndValues?.Add((jsonProperty.Name, $"{jsonProperty.Value.ToString()}")); //jsonProperty.Value.GetString() NO porque cuando es número se revienta
                     }
                 }
-
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex?.Message);
-
             }
             return propertiesAndValues;
         }
@@ -423,36 +464,35 @@ namespace ConnectionLibrary.Standard
         /// Agrega comillas simples o no
         /// </summary>
         /// <returns>El valor envuelto en un objeto</returns>
-        private static object AddSimpleQuotesOrNot(string value)
+        private static object AddSimpleQuotesOrNot(string value, string dateFormat = "yyyy-MM-dd HH:mm:ss")
         {
-            //Si es un numero decimal
+            //Si es el valor por defecto entonces
+            if (value == "DEFAULT")
+            {
+                return value;
+            }
+            //Si es un numero decimal entonces
             if (decimal.TryParse(value, out decimal decimalValue))
             {
                 return decimalValue;
             }
-            else
             //Si es un número entero entonces
             if (int.TryParse(value, out int intValue))
             {
                 return intValue;
             }
-            else
             //Si es un boolean entonces
             if (bool.TryParse(value, out bool booleanValue))
             {
                 return Convert.ToInt16(booleanValue);
             }
-            else
             //Si es una fecha entonces
             if (DateTime.TryParse(value, out DateTime dateTime))
             {
-                return $"'{dateTime}'";
+                return $"'{dateTime.ToString(dateFormat)}'";
             }
             //Si es una cadena (String) entonces
-            else
-            {
-                return $"'{value}'";
-            }
+            return $"'{value}'";
         }
 
         #endregion
